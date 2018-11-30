@@ -287,7 +287,7 @@ namespace TIG.MakaoDLL
                 }
                 mojeKarte.AddRange(tempList);
                 IzbaciIzIzbora(karte);
-                brojKaznenih = brojKaznenih - karte.Count;
+                brojKaznenih = 0;
             }
         }
         public void PostaviTalon(List<Karta> karte, Boja boja, int brojProtivnikovihKarata)
@@ -350,14 +350,20 @@ namespace TIG.MakaoDLL
                 talon.Broj = bestMove.Karte.Last().Broj;
             }
 
+            //if (bestMove.Tip.HasFlag(TipPoteza.KupiKazneneKarte))
+            //{//Regulise slucaj kada se generise kontekst nakon Kupovine kaznenih karti (koristan pri igranju sam sa sobom)
+            //    brojKaznenih = 0;
+            //}
+
             if (bestMove.Tip.HasFlag(TipPoteza.KrajPoteza))
             {
                 kupioKartu = false;
             }
-            else if (bestMove.Tip.HasFlag(TipPoteza.KupiKartu))
-            {
-                kupioKartu = true;
-            }
+
+            //else if (bestMove.Tip.HasFlag(TipPoteza.KupiKartu))
+            //{//Regulise slucaj kupovine karte (koristan pri igranju sam sa sobom)
+            //    kupioKartu = true;
+            //}
         }
 
         private void IzbaciIzIzbora(Karta karta)

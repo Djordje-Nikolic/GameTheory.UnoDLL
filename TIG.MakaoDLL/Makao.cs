@@ -100,7 +100,7 @@ namespace TIG.MakaoDLL
                 }
             }
 
-            trenutniKontekst.OdigrajPotez(bestMove);        //Da li treba da izvrsimo nadjeni najbolji potez na trenutnom kontekstu ili je to posao engina?
+            trenutniKontekst.OdigrajPotez(bestMove);        
         }
         private async Task<Tuple<int, Move>> IterateAB(GameContext kontekst, int dubina, int alfa, int beta, bool maxPlayer, CancellationToken token)
         {
