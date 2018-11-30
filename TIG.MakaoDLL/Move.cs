@@ -3,7 +3,7 @@ using TIG.AV.Karte;
 
 namespace TIG.MakaoDLL
 {
-    class Move : IMove
+    public class Move : IMove
     {
         public TipPoteza Tip { get; set; }
 

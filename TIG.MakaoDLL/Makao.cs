@@ -6,7 +6,7 @@ using TIG.AV.Karte;
 
 namespace TIG.MakaoDLL
 {
-    class Makao : IIgra
+    public class Makao : IIgra
     {
         private GameContext trenutniKontekst = null;      
         private bool rukaSpremna = false;
@@ -51,7 +51,7 @@ namespace TIG.MakaoDLL
 
             if (rukaSpremna && talonSpreman)
             {
-                Task.Factory.StartNew(() => AlphaBetaID(4, tokenSource.Token));
+                Task.Factory.StartNew(() => AlphaBetaID(6, tokenSource.Token));
             }
             else
                 throw new Exception("Igra nije postavljena te igra ne moze poceti.");

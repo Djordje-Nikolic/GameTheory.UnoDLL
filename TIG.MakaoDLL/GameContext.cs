@@ -21,7 +21,7 @@ using TIG.AV.Karte;
 
 namespace TIG.MakaoDLL
 {
-    class GameContext
+    public class GameContext
     {
         public readonly static string[] Broj = { "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
 
@@ -603,6 +603,10 @@ namespace TIG.MakaoDLL
                     {
                         potezi.Add(new Move(TipPoteza.KupiKartu, null, Boja.Unknown));
                         //kupioKartu = true;    Nema svrhu
+                    }
+                    else
+                    {
+                        potezi.Add(new Move(TipPoteza.KrajPoteza, null, Boja.Unknown));
                     }
                 }
                 else
