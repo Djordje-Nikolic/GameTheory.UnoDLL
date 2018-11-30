@@ -12,6 +12,7 @@ namespace TIG.MakaoDLL
         private bool rukaSpremna = false;
         private bool talonSpreman = false;
         private CancellationTokenSource tokenSource;
+        private int maxDubina;
 
         private Move bestMove;
         public IMove BestMove
@@ -28,11 +29,17 @@ namespace TIG.MakaoDLL
 
         private int nodeCounter = 0;
 
-        public Makao()
+        /// <summary>
+        /// Opcioni parametar predstavlja maksimalnu dubinu Iterative Deepening-a, u slucaju da je uneta vrednost negativna ili jednaka nuli, 
+        /// podrazumeva se da se Iterative Deepening vrsi do rucnog prekida.
+        /// </summary>
+        /// <param name="maxDubina"></param>
+        public Makao(int maxDubina = -1)
         {
             rukaSpremna = false;
             talonSpreman = false;
             trenutniKontekst = new GameContext();
+            this.maxDubina = maxDubina;
         }
         public void Bacenekarte(List<Karta> karte, Boja boja, int BrojKarataProtivnika)
         {
@@ -51,25 +58,45 @@ namespace TIG.MakaoDLL
 
             if (rukaSpremna && talonSpreman)
             {
-                Task.Factory.StartNew(() => AlphaBetaID(6, tokenSource.Token));
+                Task.Factory.StartNew(() => AlphaBetaID(tokenSource.Token));
             }
             else
                 throw new Exception("Igra nije postavljena te igra ne moze poceti.");
         }
-        private async void AlphaBetaID(int maxDubina, CancellationToken token)
+        private async void AlphaBetaID(CancellationToken token)
         {
             Tuple<int, Move> rezultat = null;
-            for (int i = 1; i <= maxDubina; i++)
-            {
-                rezultat = await IterateAB(trenutniKontekst, i, int.MinValue, int.MaxValue, true, token);
 
-                if (token.IsCancellationRequested)
+            if (maxDubina > 0)
+            {
+                for (int i = 1; i <= maxDubina; i++)
                 {
-                    break;
+                    rezultat = await IterateAB(trenutniKontekst, i, int.MinValue, int.MaxValue, true, token);
+
+                    if (token.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    else if (rezultat != null && rezultat.Item2 != null)
+                    {
+                        bestMove = rezultat.Item2;
+                    }
                 }
-                else if (rezultat != null && rezultat.Item2 != null)
+            }
+            else
+            {
+                for (int i = 1; i >= 1; i++)
                 {
-                    bestMove = rezultat.Item2;
+                    rezultat = await IterateAB(trenutniKontekst, i, int.MinValue, int.MaxValue, true, token);
+
+                    if (token.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    else if (rezultat != null && rezultat.Item2 != null)
+                    {
+                        bestMove = rezultat.Item2;
+                    }
                 }
             }
 

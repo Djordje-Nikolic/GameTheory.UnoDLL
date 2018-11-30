@@ -264,8 +264,8 @@ namespace TIG.MakaoDLL
         {
             if (karte.Count == 1)
             {
-                if (kupioKartu == false)
-                {
+                //if (kupioKartu == false)      //Workaround, resiti kada se ubaci generator kupovine
+                //{
                     Karta temp = new Karta();
                     temp.Boja = karte.Last().Boja;
                     temp.Broj = karte.Last().Broj;
@@ -273,7 +273,7 @@ namespace TIG.MakaoDLL
                     mojeKarte.Add(temp);
                     IzbaciIzIzbora(temp);
                     kupioKartu = true;
-                }
+                //}
             }
             else if (karte.Count > 1)
             {
@@ -353,6 +353,10 @@ namespace TIG.MakaoDLL
             if (bestMove.Tip.HasFlag(TipPoteza.KrajPoteza))
             {
                 kupioKartu = false;
+            }
+            else if (bestMove.Tip.HasFlag(TipPoteza.KupiKartu))
+            {
+                kupioKartu = true;
             }
         }
 
