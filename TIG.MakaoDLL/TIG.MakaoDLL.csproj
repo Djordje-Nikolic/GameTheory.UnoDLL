@@ -43,7 +43,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
     <Compile Include="GameContext.cs" />
     <Compile Include="Makao.cs" />
     <Compile Include="Move.cs" />
