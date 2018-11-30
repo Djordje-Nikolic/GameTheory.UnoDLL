@@ -840,6 +840,10 @@ namespace TIG.MakaoDLL
                         result += 20;
                 }
             }
+            else if (izvorniPotez.Tip == TipPoteza.KrajPoteza)
+            {
+                result = -1000;
+            }
             else
             {
                 result = -2000;
