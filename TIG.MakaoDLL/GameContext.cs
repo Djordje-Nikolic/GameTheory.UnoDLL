@@ -529,17 +529,15 @@ namespace TIG.MakaoDLL
             }
         }
 
-        public List<GameContext> GenerisiKontekste(bool maxPlayer) 
+        public IEnumerable<GameContext> GenerisiKontekste(bool maxPlayer) 
         {
             List<Move> potezi = GenerisiMogucePoteze(maxPlayer);
-            List<GameContext> konteksti = new List<GameContext>(potezi.Count);
 
             foreach (var potez in potezi)
             {
-                konteksti.Add(new GameContext(this, potez, maxPlayer));
+                yield return new GameContext(this, potez, maxPlayer);
             }
 
-            return konteksti;
         }     
         private List<Move> GenerisiMogucePoteze(bool maxPlayer)
         {
