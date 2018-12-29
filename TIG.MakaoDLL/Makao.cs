@@ -8,7 +8,7 @@ namespace TIG.MakaoDLL
 {
     public class Makao : IIgra
     {
-        private GameContext trenutniKontekst = null;      
+        public GameContext trenutniKontekst = null;      
         private bool rukaSpremna = false;
         private bool talonSpreman = false;
         private CancellationTokenSource tokenSource;
