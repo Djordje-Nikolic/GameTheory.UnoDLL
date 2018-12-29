@@ -28,6 +28,7 @@ namespace TIG.MakaoDLL
         }
 
         private int nodeCounter = 0;
+        private int cutCounter = 0;
 
         /// <summary>
         /// Opcioni parametar predstavlja maksimalnu dubinu Iterative Deepening-a, u slucaju da je uneta vrednost negativna ili jednaka nuli, 
@@ -58,12 +59,12 @@ namespace TIG.MakaoDLL
 
             if (rukaSpremna && talonSpreman)
             {
-                Task.Factory.StartNew(() => AlphaBetaID(tokenSource.Token));
+                Task.Factory.StartNew(() => IterativeDeepening(tokenSource.Token));
             }
             else
                 throw new Exception("Igra nije postavljena te igra ne moze poceti.");
         }
-        private async void AlphaBetaID(CancellationToken token)
+        private async void IterativeDeepening(CancellationToken token)
         {
             Tuple<int, Move> rezultat = null;
 
@@ -141,6 +142,7 @@ namespace TIG.MakaoDLL
                       
                         if (beta < alfa)
                         {
+                            cutCounter++;
                             return new Tuple<int, Move>(alfa, bestMove);
                         }
                     }
@@ -172,6 +174,7 @@ namespace TIG.MakaoDLL
 
                         if (beta < alfa)
                         {
+                            cutCounter++;
                             return new Tuple<int, Move>(beta, bestMove);
                         }
                     }
