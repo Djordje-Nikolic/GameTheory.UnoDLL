@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using TIG.AV.Karte;
 
@@ -23,7 +24,29 @@ namespace TIG.MakaoDLL
 {
     public class GameContext
     {
-        public readonly static string[] Broj = { "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
+        internal struct ChainAndHandPair
+        {
+            public List<Karta> chain { get; }
+            public List<Karta> hand { get; }
+            public int noOfCardsLeft { get; }
+
+            public ChainAndHandPair(List<Karta> chain, List<Karta> hand)
+            {
+                this.chain = chain;
+                this.hand = hand;
+                this.noOfCardsLeft = -1;
+            }
+
+            public ChainAndHandPair(List<Karta> chain, List<Karta> hand, int noOfCardsLeft)
+            {
+                this.chain = chain;
+                this.hand = hand;
+                this.noOfCardsLeft = noOfCardsLeft;
+            }
+        }
+
+        private static List<String> preferences = new List<string> { "A", "8" };
+        public readonly static String[] Broj = { "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
 
         private List<Karta> mojeKarte; //ubaciti broj nepoznatih karata? da se ne prebrojava svaki put
         private int brojProtKarata { get; set; }
@@ -247,6 +270,11 @@ namespace TIG.MakaoDLL
             }
         }
 
+        private void OrderHandByImportance()
+        {
+            //Seems to not increase performance
+            mojeKarte = mojeKarte.OrderByDescending(item => preferences.IndexOf(item.Broj)).ToList();
+        }
         public void PostaviRuku(List<Karta> karte)
         {
             IzbaciIzIzbora(karte);
@@ -259,6 +287,8 @@ namespace TIG.MakaoDLL
                 temp.Broj = karta.Broj;
                 mojeKarte.Add(temp);
             }
+
+            OrderHandByImportance();
         }
         public void KupiKarte(List<Karta> karte)
         {
@@ -273,7 +303,8 @@ namespace TIG.MakaoDLL
                     mojeKarte.Add(temp);
                     IzbaciIzIzbora(temp);
                     kupioKartu = true;
-                //}
+                //
+                //OrderHandByImportance();
             }
             else if (karte.Count > 1)
             {
@@ -288,6 +319,8 @@ namespace TIG.MakaoDLL
                 mojeKarte.AddRange(tempList);
                 IzbaciIzIzbora(karte);
                 brojKaznenih = 0;
+
+                //OrderHandByImportance();
             }
         }
         public void PostaviTalon(List<Karta> karte, Boja boja, int brojProtivnikovihKarata)
@@ -540,7 +573,7 @@ namespace TIG.MakaoDLL
             }
             return konteksti;
         }     
-        private List<Move> GenerisiMogucePoteze(bool maxPlayer)
+        public List<Move> GenerisiMogucePoteze(bool maxPlayer)
         {
             List<Move> potezi = new List<Move>();
 
@@ -579,15 +612,13 @@ namespace TIG.MakaoDLL
                         }
                     }
 
-                    List<Karta> output = new List<Karta>(1);
                     foreach (var karta in mojeKarte)
                     {
                         if (karta.Broj.Equals(Broj[0]) || karta.Broj.Equals(Broj[7]))
                         {
                             if (karta.Boja == trenutnaBoja || talon.Broj.Equals(karta.Broj))
                             {
-                                output.Add(karta);
-                                DodajPotezeA8Kombinacije(output, mojeKarte, ref potezi);
+                                DodajPotezeA8Kombinacije(karta, mojeKarte, ref potezi);
                             }
                         }
                         else 
@@ -605,7 +636,6 @@ namespace TIG.MakaoDLL
                             }
 
                         }
-                        output.Clear();
                     }
 
                     if (kupioKartu == false)
@@ -712,9 +742,7 @@ namespace TIG.MakaoDLL
                     {
                         if (container[i].Boja == trenutnaBoja)
                         {
-                            output.Add(container[i]);
-                            DodajPotezeA8KombinacijeProtivnik(output, container, ref potezi);
-                            output.Clear();
+                            DodajPotezeA8KombinacijeProtivnik(container[i], container, ref potezi);
                         }
                     }
 
@@ -732,101 +760,137 @@ namespace TIG.MakaoDLL
         {
             return source.OrderByDescending(move => move.Karte != null ? move.Karte.Count : 0).ToList();
         }
-        private void DodajPotezeA8KombinacijeProtivnik(List<Karta> izvor, List<Karta> moguceKarte, ref List<Move> potezi)
+        private void DodajPotezeA8KombinacijeProtivnik(Karta start, List<Karta> moguceKarte, ref List<Move> potezi)
         {
-            List<Karta> listaBezTrenutnog = new List<Karta>(moguceKarte);
-            Karta trenutni = izvor.Last();
-            listaBezTrenutnog.Remove(trenutni);         //Pretpostavljamo da se ostali iz izvora ne pojavljuju u mojeKarte jer su ranije izvuceni
-            int preostaliBrojKarata = brojProtKarata - izvor.Count;
+            List<Karta> lastHand = new List<Karta>(moguceKarte);
+            lastHand.Remove(start);
+            List<Karta> zaSlanja;       //Pretpostavljamo da se ostali iz izvora ne pojavljuju u mojeKarte jer su ranije izvuceni
+            List<Karta> lastChain;
+            ChainAndHandPair lastPair;
+            int preostaliBrojKarata = brojProtKarata - 1;
 
-            if (trenutni.Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
-            {
-                if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
-                    potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(izvor), Boja.Unknown));
-                else if (preostaliBrojKarata == 1)
-                    potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Poslednja, new List<Karta>(izvor), Boja.Unknown));                          
-            }
+            Stack<ChainAndHandPair> unfinishedMoves = new Stack<ChainAndHandPair>();
 
-            if (trenutni.Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
-            {
-                if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
-                    potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(izvor), Boja.Unknown));
-                else if (preostaliBrojKarata == 1)
-                    potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.Poslednja | TipPoteza.KupiKartu, new List<Karta>(izvor), Boja.Unknown));
-            }
+            unfinishedMoves.Push(new ChainAndHandPair(new List<Karta>() { start }, new List<Karta>(lastHand), preostaliBrojKarata));
+            //Setup za prvu iteraciju
 
-            if (preostaliBrojKarata > 0)
+            while (unfinishedMoves.Count > 0)
             {
-                List<Karta> zaSlanja;
-                foreach (var karta in listaBezTrenutnog)
+                lastPair = unfinishedMoves.Pop();
+                lastChain = lastPair.chain;
+                lastHand = lastPair.hand;
+                preostaliBrojKarata = lastPair.noOfCardsLeft;
+
+                if (lastChain.Last().Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
                 {
-                    zaSlanja = new List<Karta>(izvor);
-                    zaSlanja.Add(karta);
+                    if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
+                        potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(lastChain), Boja.Unknown));
+                    else if (preostaliBrojKarata == 1)
+                        potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Poslednja, new List<Karta>(lastChain), Boja.Unknown));
+                }
 
-                    if (!karta.Broj.Equals(Broj[0]) && !karta.Broj.Equals(Broj[7]))
+                if (lastChain.Last().Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
+                {
+                    if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
+                        potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown));
+                    else if (preostaliBrojKarata == 1)
+                        potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.Poslednja | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown));
+                }
+
+                if (preostaliBrojKarata > 0)
+                {
+                    lastHand = lastHand.OrderBy(item => preferences.IndexOf(item.Broj)).ToList();
+                    foreach (var karta in lastHand)
                     {
-                        if (karta.Broj.Equals(Broj[10]))
+                        zaSlanja = new List<Karta>(lastChain);
+
+                        if (!karta.Broj.Equals(Broj[0]) && !karta.Broj.Equals(Broj[7]))
                         {
-                            DodajPotezeZandar(zaSlanja, ref potezi, preostaliBrojKarata + zaSlanja.Count - 1);
+                            if (karta.Broj.Equals(Broj[10]))
+                            {
+                                zaSlanja.Add(karta);
+                                DodajPotezeZandar(zaSlanja, ref potezi, preostaliBrojKarata + zaSlanja.Count - 1);
+                            }
+                            else if (zaSlanja.Last().Boja == karta.Boja)
+                            {
+                                zaSlanja.Add(karta);
+                                DodajPotezSlabaKarta(zaSlanja, ref potezi, preostaliBrojKarata + zaSlanja.Count - 1);
+                            }
                         }
-                        else if (trenutni.Boja == karta.Boja)
+                        else if (karta.Boja == zaSlanja.Last().Boja || karta.Broj.Equals(zaSlanja.Last().Broj))
                         {
-                            DodajPotezSlabaKarta(zaSlanja, ref potezi, preostaliBrojKarata + zaSlanja.Count - 1);
+                            zaSlanja.Add(karta);
+                            List<Karta> temp = new List<Karta>(lastHand);
+                            temp.Remove(karta);
+                            unfinishedMoves.Push(new ChainAndHandPair(zaSlanja, temp, preostaliBrojKarata - 1));
                         }
-                    }
-                    else if (karta.Boja == trenutni.Boja || karta.Broj.Equals(trenutni.Broj))
-                    {
-                        DodajPotezeA8KombinacijeProtivnik(zaSlanja, listaBezTrenutnog, ref potezi);
                     }
                 }
             }
         }
-        private void DodajPotezeA8Kombinacije(List<Karta> izvor, List<Karta> mojeKarte, ref List<Move> potezi)
+        private void DodajPotezeA8Kombinacije(Karta start, List<Karta> mojeKarte, ref List<Move> potezi)
         {
-            List<Karta> listaBezTrenutnog = new List<Karta>(mojeKarte);
-            Karta trenutni = izvor.Last();
-            listaBezTrenutnog.Remove(trenutni);     //Pretpostavljamo da se ostali iz izvora ne pojavljuju u mojeKarte jer su ranije izvuceni
+            List<Karta> lastHand = new List<Karta>(mojeKarte);
+            lastHand.Remove(start);     //Pretpostavljamo da se ostali iz izvora ne pojavljuju u mojeKarte jer su ranije izvuceni
+            List<Karta> zaSlanja;
+            List<Karta> lastChain;
+            ChainAndHandPair lastPair;
 
-            if (trenutni.Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
+            Stack<ChainAndHandPair> unfinishedMoves = new Stack<ChainAndHandPair>();
+
+            unfinishedMoves.Push(new ChainAndHandPair(new List<Karta>() { start }, new List<Karta>(lastHand)));
+            //Setup za prvu iteraciju
+            while (unfinishedMoves.Count > 0)
             {
-                if (listaBezTrenutnog.Count > 1)
-                    potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(izvor), Boja.Unknown));
-                else if (listaBezTrenutnog.Count == 1)
-                    potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Makao, new List<Karta>(izvor), Boja.Unknown));
-                else if (listaBezTrenutnog.Count == 0)
-                    potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Poslednja, new List<Karta>(izvor), Boja.Unknown));                
-            }
+                lastPair = unfinishedMoves.Pop();
+                lastChain = lastPair.chain;
+                lastHand = lastPair.hand;
 
-            if (trenutni.Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
-            {
-                if (listaBezTrenutnog.Count > 1 || listaBezTrenutnog.Count == 0)
-                    potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(izvor), Boja.Unknown));
-                else if (listaBezTrenutnog.Count == 1)
-                    potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.Makao | TipPoteza.KupiKartu, new List<Karta>(izvor), Boja.Unknown));
-            }
-
-                List<Karta> zaSlanja;
-                foreach (var karta in listaBezTrenutnog)
+                if (lastChain.Last().Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
                 {
-                    zaSlanja = new List<Karta>(izvor);
-                    zaSlanja.Add(karta);
+                    if (lastHand.Count > 1 || lastHand.Count == 0)
+                        potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(lastChain), Boja.Unknown));
+                    else if (lastHand.Count == 1)
+                        potezi.Add(new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Makao, new List<Karta>(lastChain), Boja.Unknown));
+                }
+                else if (lastChain.Last().Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
+                {
+                    if (lastHand.Count > 1 || lastHand.Count == 0)
+                        potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown));
+                    else if (lastHand.Count == 1)
+                        potezi.Add(new Move(TipPoteza.BacaKartu | TipPoteza.Makao | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown));
+                }
+
+                lastHand = lastHand.OrderBy(item => preferences.IndexOf(item.Broj)).ToList();
+                foreach (var karta in lastHand)
+                {
+                    zaSlanja = new List<Karta>(lastChain);
 
                     if (!karta.Broj.Equals(Broj[0]) && !karta.Broj.Equals(Broj[7]))
                     {
                         if (karta.Broj.Equals(Broj[10]))
                         {
-                            DodajPotezeZandar(zaSlanja, ref potezi, listaBezTrenutnog.Count + zaSlanja.Count - 1);
+                            zaSlanja.Add(karta);
+                            DodajPotezeZandar(zaSlanja, ref potezi, lastHand.Count + zaSlanja.Count - 1);
                         }
-                        else if (trenutni.Boja == karta.Boja)
+                        else if (zaSlanja.Last().Boja == karta.Boja)
                         {
-                            DodajPotezSlabaKarta(zaSlanja, ref potezi, listaBezTrenutnog.Count + zaSlanja.Count - 1);
+                            zaSlanja.Add(karta);
+                            DodajPotezSlabaKarta(zaSlanja, ref potezi, lastHand.Count + zaSlanja.Count - 1);
                         }
                     }
-                    else if (karta.Boja == trenutni.Boja || karta.Broj.Equals(trenutni.Broj))
+                    else
                     {
-                        DodajPotezeA8Kombinacije(zaSlanja, listaBezTrenutnog, ref potezi);
+                        if (karta.Boja == zaSlanja.Last().Boja || karta.Broj.Equals(zaSlanja.Last().Broj))
+                        {
+                            zaSlanja.Add(karta);
+                            List<Karta> temp = new List<Karta>(lastHand);
+                            temp.Remove(karta);
+                            unfinishedMoves.Push(new ChainAndHandPair(zaSlanja, temp));
+                        }
                     }
                 }
+            }
         }
 
         //NE VALJA EVALUACIJA
