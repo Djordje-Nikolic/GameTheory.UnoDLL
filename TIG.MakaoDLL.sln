@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27703.2047
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TIG.MakaoDLL", "TIG.MakaoDLL\TIG.MakaoDLL.csproj", "{4DD055A0-782E-4632-9BDD-649492DE5ADB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TIG.Makao", "..\TIG.Makao\TIG.Makao\TIG.Makao.csproj", "{FE234F3E-10F3-4E55-B74D-F741C98C79B9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{4DD055A0-782E-4632-9BDD-649492DE5ADB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4DD055A0-782E-4632-9BDD-649492DE5ADB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4DD055A0-782E-4632-9BDD-649492DE5ADB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE234F3E-10F3-4E55-B74D-F741C98C79B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE234F3E-10F3-4E55-B74D-F741C98C79B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE234F3E-10F3-4E55-B74D-F741C98C79B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE234F3E-10F3-4E55-B74D-F741C98C79B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

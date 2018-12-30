@@ -28,6 +28,7 @@ namespace TIG.MakaoDLL
         }
 
         private int nodeCounter = 0;
+        private int cutCounter = 0;
 
         /// <summary>
         /// Opcioni parametar predstavlja maksimalnu dubinu Iterative Deepening-a, u slucaju da je uneta vrednost negativna ili jednaka nuli, 
@@ -138,9 +139,10 @@ namespace TIG.MakaoDLL
                         {
                             alfa = v;
                         }
-                      
+
                         if (beta < alfa)
-                        {
+                        { 
+                            cutCounter++;
                             return new Tuple<int, Move>(alfa, bestMove);
                         }
                     }
@@ -172,6 +174,7 @@ namespace TIG.MakaoDLL
 
                         if (beta < alfa)
                         {
+                            cutCounter++;
                             return new Tuple<int, Move>(beta, bestMove);
                         }
                     }

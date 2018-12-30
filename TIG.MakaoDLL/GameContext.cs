@@ -531,14 +531,13 @@ namespace TIG.MakaoDLL
 
         public List<GameContext> GenerisiKontekste(bool maxPlayer) 
         {
-            List<Move> potezi = GenerisiMogucePoteze(maxPlayer);
+            List<Move> potezi = GenerisiMogucePoteze(maxPlayer).OrderByDescending(move => move.Karte != null ? move.Karte.Count : 0).ToList();
             List<GameContext> konteksti = new List<GameContext>(potezi.Count);
 
             foreach (var potez in potezi)
             {
                 konteksti.Add(new GameContext(this, potez, maxPlayer));
             }
-
             return konteksti;
         }     
         private List<Move> GenerisiMogucePoteze(bool maxPlayer)
@@ -729,7 +728,10 @@ namespace TIG.MakaoDLL
 
             return potezi;
         }
-
+        private List<Move> SortMovesDescending(List<Move> source)
+        {
+            return source.OrderByDescending(move => move.Karte != null ? move.Karte.Count : 0).ToList();
+        }
         private void DodajPotezeA8KombinacijeProtivnik(List<Karta> izvor, List<Karta> moguceKarte, ref List<Move> potezi)
         {
             List<Karta> listaBezTrenutnog = new List<Karta>(moguceKarte);
