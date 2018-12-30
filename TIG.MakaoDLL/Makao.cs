@@ -62,7 +62,7 @@ namespace TIG.MakaoDLL
                 Task.Factory.StartNew(() => IterativeDeepening(tokenSource.Token));
             }
             else
-                throw new Exception("Igra nije postavljena te igra ne moze poceti.");
+                throw new Exception("Igra nije postavljena te igra ne moze poceti.\nRuka igraca spremna: " + rukaSpremna.ToString() + " Talon spreman: " + talonSpreman.ToString());
         }
         private async void IterativeDeepening(CancellationToken token)
         {

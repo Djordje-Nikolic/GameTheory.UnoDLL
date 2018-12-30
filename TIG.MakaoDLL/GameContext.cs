@@ -26,16 +26,26 @@ namespace TIG.MakaoDLL
     {
         public List<Karta> chain { get; }
         public List<Karta> hand { get; }
+        public int noOfCardsLeft { get; }
 
         public ChainAndHandPair(List<Karta> chain, List<Karta> hand)
         {
             this.chain = chain;
             this.hand = hand;
+            this.noOfCardsLeft = -1;
+        }
+
+        public ChainAndHandPair(List<Karta> chain, List<Karta> hand, int noOfCardsLeft)
+        {
+            this.chain = chain;
+            this.hand = hand;
+            this.noOfCardsLeft = noOfCardsLeft;
         }
     }
 
     public class GameContext
     {
+        private static List<String> preferences = new List<string> { "A", "8" };
         public readonly static string[] Broj = { "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
 
         private List<Karta> mojeKarte; //ubaciti broj nepoznatih karata? da se ne prebrojava svaki put
@@ -261,7 +271,6 @@ namespace TIG.MakaoDLL
         }
         private void OrderHandByImportance()
         {
-            List<String> preferences = new List<string> { "A", "8" };
             mojeKarte = mojeKarte.OrderBy(item => preferences.IndexOf(item.Broj)).ToList();
             mojeKarte.Reverse();
         }
@@ -795,78 +804,71 @@ namespace TIG.MakaoDLL
             ChainAndHandPair lastPair;
             int preostaliBrojKarata = brojProtKarata - 1;
 
-            Stack<ChainAndHandPair> lastPass = new Stack<ChainAndHandPair>();
-            Stack<ChainAndHandPair> nextPass = new Stack<ChainAndHandPair>();
+            Stack<ChainAndHandPair> unfinishedMoves = new Stack<ChainAndHandPair>();
 
-            lastPass.Push(new ChainAndHandPair(new List<Karta>() { start }, new List<Karta>(lastHand)));
+            unfinishedMoves.Push(new ChainAndHandPair(new List<Karta>() { start }, new List<Karta>(lastHand), preostaliBrojKarata));
             //Setup za prvu iteraciju
 
-            do
+            while (unfinishedMoves.Count > 0)
             {
-                while(lastPass.Count > 0)
+                lastPair = unfinishedMoves.Pop();
+                lastChain = lastPair.chain;
+                lastHand = lastPair.hand;
+                preostaliBrojKarata = lastPair.noOfCardsLeft;
+
+                if (lastChain.Last().Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
                 {
-                    lastPair = lastPass.Pop();
-                    lastChain = lastPair.chain;
-                    lastHand = lastPair.hand;
+                    if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
+                        yield return new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(lastChain), Boja.Unknown);
+                    else if (preostaliBrojKarata == 1)
+                        yield return new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Poslednja, new List<Karta>(lastChain), Boja.Unknown);
+                }
 
-                    if (lastChain.Last().Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
-                    {
-                        if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
-                            yield return new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(lastChain), Boja.Unknown);
-                        else if (preostaliBrojKarata == 1)
-                            yield return new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Poslednja, new List<Karta>(lastChain), Boja.Unknown);
-                    }
+                if (lastChain.Last().Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
+                {
+                    if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
+                        yield return new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
+                    else if (preostaliBrojKarata == 1)
+                        yield return new Move(TipPoteza.BacaKartu | TipPoteza.Poslednja | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
+                }
 
-                    if (lastChain.Last().Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
+                if (preostaliBrojKarata > 0)
+                {
+                    lastHand = lastHand.OrderBy(item => preferences.IndexOf(item.Broj)).ToList();
+                    foreach (var karta in lastHand)
                     {
-                        if (preostaliBrojKarata > 1 || preostaliBrojKarata == 0)
-                            yield return new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
-                        else if (preostaliBrojKarata == 1)
-                            yield return new Move(TipPoteza.BacaKartu | TipPoteza.Poslednja | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
-                    }
+                        zaSlanja = new List<Karta>(lastChain);
 
-                    if (preostaliBrojKarata > 0)
-                    {
-                        foreach (var karta in lastHand)
+                        if (!karta.Broj.Equals(Broj[0]) && !karta.Broj.Equals(Broj[7]))
                         {
-                            zaSlanja = new List<Karta>(lastChain);
-
-                            if (!karta.Broj.Equals(Broj[0]) && !karta.Broj.Equals(Broj[7]))
-                            {
-                                if (karta.Broj.Equals(Broj[10]))
-                                {
-                                    zaSlanja.Add(karta);
-                                    foreach (var move in DodajPotezeZandar(zaSlanja, preostaliBrojKarata + zaSlanja.Count - 1))
-                                    {
-                                        yield return move;
-                                    }
-                                }
-                                else if (zaSlanja.Last().Boja == karta.Boja)
-                                {
-                                    zaSlanja.Add(karta);
-                                    Move temp = DodajPotezSlabaKarta(zaSlanja, preostaliBrojKarata + zaSlanja.Count - 1);
-                                    if (temp != null)
-                                    {
-                                        yield return temp;
-                                    }
-                                }
-                            }
-                            else if (karta.Boja == zaSlanja.Last().Boja || karta.Broj.Equals(zaSlanja.Last().Broj))
+                            if (karta.Broj.Equals(Broj[10]))
                             {
                                 zaSlanja.Add(karta);
-                                List<Karta> temp = new List<Karta>(lastHand);
-                                temp.Remove(karta);
-                                nextPass.Push(new ChainAndHandPair(zaSlanja, temp));
+                                foreach (var move in DodajPotezeZandar(zaSlanja, preostaliBrojKarata + zaSlanja.Count - 1))
+                                {
+                                    yield return move;
+                                }
                             }
+                            else if (zaSlanja.Last().Boja == karta.Boja)
+                            {
+                                zaSlanja.Add(karta);
+                                Move temp = DodajPotezSlabaKarta(zaSlanja, preostaliBrojKarata + zaSlanja.Count - 1);
+                                if (temp != null)
+                                {
+                                    yield return temp;
+                                }
+                            }
+                        }
+                        else if (karta.Boja == zaSlanja.Last().Boja || karta.Broj.Equals(zaSlanja.Last().Broj))
+                        {
+                            zaSlanja.Add(karta);
+                            List<Karta> temp = new List<Karta>(lastHand);
+                            temp.Remove(karta);
+                            unfinishedMoves.Push(new ChainAndHandPair(zaSlanja, temp, preostaliBrojKarata - 1));
                         }
                     }
                 }
-
-                lastPass = nextPass;
-                nextPass = new Stack<ChainAndHandPair>();
-                preostaliBrojKarata--;
             }
-            while (preostaliBrojKarata >= 0);
         }
 
         private IEnumerable<Move> DodajPotezeA8Kombinacije(Karta start, List<Karta> mojeKarte)
@@ -877,75 +879,68 @@ namespace TIG.MakaoDLL
             List<Karta> lastChain;
             ChainAndHandPair lastPair;
 
-            Stack<ChainAndHandPair> lastPass = new Stack<ChainAndHandPair>();
-            Stack<ChainAndHandPair> nextPass = new Stack<ChainAndHandPair>();
+            Stack<ChainAndHandPair> unfinishedMoves = new Stack<ChainAndHandPair>();
 
-            lastPass.Push(new ChainAndHandPair(new List<Karta>() { start }, new List<Karta>(lastHand)));
+            unfinishedMoves.Push(new ChainAndHandPair(new List<Karta>() { start }, new List<Karta>(lastHand)));
             //Setup za prvu iteraciju
-            do
+            while (unfinishedMoves.Count > 0)
             {
-                while (lastPass.Count > 0)
+                lastPair = unfinishedMoves.Pop();
+                lastChain = lastPair.chain;
+                lastHand = lastPair.hand;
+
+                if (lastChain.Last().Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
                 {
-                    lastPair = lastPass.Pop();
-                    lastChain = lastPair.chain;
-                    lastHand = lastPair.hand; 
+                    if (lastHand.Count > 1 || lastHand.Count == 0)
+                        yield return new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(lastChain), Boja.Unknown);
+                    else if (lastHand.Count == 1)
+                        yield return new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Makao, new List<Karta>(lastChain), Boja.Unknown);
+                }
+                else if (lastChain.Last().Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
+                {
+                    if (lastHand.Count > 1 || lastHand.Count == 0)
+                        yield return new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
+                    else if (lastHand.Count == 1)
+                        yield return new Move(TipPoteza.BacaKartu | TipPoteza.Makao | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
+                }
 
-                    if (lastChain.Last().Broj.Equals(Broj[7]))          //Ako je trenutna prva karta osmica legalan potez je zavrsiti potez
-                    {
-                        if (lastHand.Count > 1 || lastHand.Count == 0)
-                            yield return new Move(TipPoteza.KrajPotezaBacikartu, new List<Karta>(lastChain), Boja.Unknown);
-                        else if (lastHand.Count == 1)
-                            yield return new Move(TipPoteza.KrajPotezaBacikartu | TipPoteza.Makao, new List<Karta>(lastChain), Boja.Unknown);
-                    }
-                    else if (lastChain.Last().Broj.Equals(Broj[0]))       //Ako je trenutna prva karta kec legalan potez je kupiti kartu
-                    {
-                        if (lastHand.Count > 1 || lastHand.Count == 0)
-                            yield return new Move(TipPoteza.BacaKartu | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
-                        else if (lastHand.Count == 1)
-                            yield return new Move(TipPoteza.BacaKartu | TipPoteza.Makao | TipPoteza.KupiKartu, new List<Karta>(lastChain), Boja.Unknown);
-                    }
+                lastHand = lastHand.OrderBy(item => preferences.IndexOf(item.Broj)).ToList();
+                foreach (var karta in lastHand)
+                {
+                    zaSlanja = new List<Karta>(lastChain);
 
-                    foreach (var karta in lastHand)
+                    if (!karta.Broj.Equals(Broj[0]) && !karta.Broj.Equals(Broj[7]))
                     {
-                        zaSlanja = new List<Karta>(lastChain);
-
-                        if (!karta.Broj.Equals(Broj[0]) && !karta.Broj.Equals(Broj[7]))
+                        if (karta.Broj.Equals(Broj[10]))
                         {
-                            if (karta.Broj.Equals(Broj[10]))
+                            zaSlanja.Add(karta);
+                            foreach (var move in DodajPotezeZandar(zaSlanja, lastHand.Count + zaSlanja.Count - 1))
                             {
-                                zaSlanja.Add(karta);
-                                foreach (var move in DodajPotezeZandar(zaSlanja, lastHand.Count + zaSlanja.Count - 1))
-                                {
-                                    yield return move;
-                                }
-                            }
-                            else if (zaSlanja.Last().Boja == karta.Boja)
-                            {
-                                zaSlanja.Add(karta);
-                                Move temp = DodajPotezSlabaKarta(zaSlanja, lastHand.Count + zaSlanja.Count - 1);
-                                if (temp != null)
-                                {
-                                    yield return temp;
-                                }
+                                yield return move;
                             }
                         }
-                        else
+                        else if (zaSlanja.Last().Boja == karta.Boja)
                         {
-                            if (karta.Boja == zaSlanja.Last().Boja || karta.Broj.Equals(zaSlanja.Last().Broj))
+                            zaSlanja.Add(karta);
+                            Move temp = DodajPotezSlabaKarta(zaSlanja, lastHand.Count + zaSlanja.Count - 1);
+                            if (temp != null)
                             {
-                                zaSlanja.Add(karta);
-                                List<Karta> temp = new List<Karta>(lastHand);
-                                temp.Remove(karta);
-                                nextPass.Push(new ChainAndHandPair(zaSlanja, temp));
+                                yield return temp;
                             }
+                        }
+                    }
+                    else
+                    {
+                        if (karta.Boja == zaSlanja.Last().Boja || karta.Broj.Equals(zaSlanja.Last().Broj))
+                        {
+                            zaSlanja.Add(karta);
+                            List<Karta> temp = new List<Karta>(lastHand);
+                            temp.Remove(karta);
+                            unfinishedMoves.Push(new ChainAndHandPair(zaSlanja, temp));
                         }
                     }
                 }
-
-                lastPass = nextPass;
-                nextPass = new Stack<ChainAndHandPair>();
             }
-            while (lastPass.Count != 0);
         }
 
         //NE VALJA EVALUACIJA
