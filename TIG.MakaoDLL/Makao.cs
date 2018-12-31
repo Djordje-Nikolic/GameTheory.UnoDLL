@@ -59,14 +59,14 @@ namespace TIG.MakaoDLL
 
             if (rukaSpremna && talonSpreman)
             {
-                Task.Factory.StartNew(() => AlphaBetaID(tokenSource.Token));
+                Task.Factory.StartNew(() => IterativeDeepening(tokenSource.Token));
             }
             else
                 throw new Exception("Igra nije postavljena te igra ne moze poceti.");
         }
-        private async void AlphaBetaID(CancellationToken token)
+        private async void IterativeDeepening(CancellationToken token)
         {
-            Tuple<int, Move> rezultat = null;
+            Tuple<float, Move> rezultat = null;
 
             if (maxDubina > 0)
             {
@@ -103,18 +103,18 @@ namespace TIG.MakaoDLL
 
             trenutniKontekst.OdigrajPotez(bestMove);        
         }
-        private async Task<Tuple<int, Move>> IterateAB(GameContext kontekst, int dubina, int alfa, int beta, bool maxPlayer, CancellationToken token)
+        private async Task<Tuple<float, Move>> IterateAB(GameContext kontekst, int dubina, float alfa, float beta, bool maxPlayer, CancellationToken token)
         {
             if (!token.IsCancellationRequested)
             {
                 nodeCounter++;
                 if (dubina == 0 || kontekst.IsTerminal(maxPlayer))
                 {
-                    return new Tuple<int, Move>(kontekst.RacunajVrednost(maxPlayer), kontekst.izvorniPotez);    //mozda treba novi potez da generisemo
+                    return new Tuple<float, Move>(kontekst.RacunajVrednost(maxPlayer), kontekst.izvorniPotez);    //mozda treba novi potez da generisemo
                 }
 
-                int v;
-                Tuple<int, Move> temp = null;   //da li ce se ikada vratiti null?
+                float v;
+                Tuple<float, Move> temp = null;   //da li ce se ikada vratiti null?
                 Move bestMove = null;
 
                 if (maxPlayer)
@@ -143,11 +143,11 @@ namespace TIG.MakaoDLL
                         if (beta < alfa)
                         { 
                             cutCounter++;
-                            return new Tuple<int, Move>(alfa, bestMove);
+                            return new Tuple<float, Move>(alfa, bestMove);
                         }
                     }
 
-                    return new Tuple<int, Move>(v, bestMove);
+                    return new Tuple<float, Move>(v, bestMove);
                 }
                 else
                 {
@@ -175,11 +175,11 @@ namespace TIG.MakaoDLL
                         if (beta < alfa)
                         {
                             cutCounter++;
-                            return new Tuple<int, Move>(beta, bestMove);
+                            return new Tuple<float, Move>(beta, bestMove);
                         }
                     }
 
-                    return new Tuple<int, Move>(v, bestMove);
+                    return new Tuple<float, Move>(v, bestMove);
                 }
             }
             else

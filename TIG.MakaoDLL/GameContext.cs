@@ -893,26 +893,203 @@ namespace TIG.MakaoDLL
             }
         }
 
+        public float Evaluation(bool player)
+        {//Broj prot kupljenih karti nije uracunat
+
+            float result = 0;
+            int noOfSevensInHand = 0;
+            int noOfJacksInHand = 0;
+            float noOfRemainingCards = preostaleHerz.Count + preostaleKaro.Count + preostalePik.Count + preostaleTref.Count;
+            int noOfPowerCardsInDeck = preostaleKec.Count + preostaleOsmice.Count + preostaleSedmice.Count + preostaleZandar.Count;
+            noOfRemainingCards += noOfPowerCardsInDeck;
+
+            //Hand evaluation
+            {
+                int handEval = 0;
+                foreach (var card in mojeKarte)
+                {
+                    switch (card.Broj)
+                    {
+                        case "A":
+                        case "8":
+                            handEval += 12;
+                            break;
+                        case "7":
+                            handEval += 13;
+                            noOfSevensInHand++;
+                            break;
+                        case "J":
+                            handEval += 25;
+                            noOfJacksInHand++;
+                            break;
+                        case "2":
+                            if (card.Boja == Boja.Tref)
+                                handEval += 20;
+                            break;
+                    }
+                }
+                result += 1 * handEval;
+            }
+
+            //Draw card eval
+            {
+                float drawnCardsEval = 0;
+                if (brojKupljenihKarti != 0)
+                {
+                    float noOfDrawnCards = brojKupljenihKarti;
+                    if (noOfPowerCardsInDeck != 0)
+                    {
+                        //drawnCardsEval = noOfPowerCardsInDeck * (noOfDrawnCards / (noOfDrawnCards + noOfRemainingCards));   
+                        drawnCardsEval = (noOfDrawnCards + noOfRemainingCards) / (noOfPowerCardsInDeck * noOfDrawnCards);
+                    }
+                    else
+                    {
+                        drawnCardsEval = 4F;
+                    }
+                    result -= 1000 * drawnCardsEval;
+                }
+            }
+
+            //Jack percentage
+            {
+                float jackEval = 0;
+                jackEval = noOfJacksInHand / mojeKarte.Count;
+                result += 25 * jackEval;
+            }
+
+            //Sevens value
+            {
+                float z = brojKupljenihKarti + noOfRemainingCards + brojProtKarata;
+                float valueOfSeven;
+
+                if (preostaleSedmice.Count == 0)
+                {
+                    valueOfSeven = 25;
+                }
+                else
+                {
+                    valueOfSeven = z / (preostaleSedmice.Count * brojProtKarata);
+                }
+                result += 1 * noOfSevensInHand * valueOfSeven;
+            }
+
+            //No of cards
+            {
+                int noOfCardsEval = 1 * (mojeKarte.Count - brojProtKarata);
+                if (brojProtKarata == 0)
+                {
+                    noOfCardsEval -= 500;
+                    return result += 1 * noOfCardsEval;
+                }
+                else if (mojeKarte.Count == 0)
+                {
+                    noOfCardsEval += 500;
+                    return result += 1 * noOfCardsEval;
+                }
+                else
+                {
+                    result += 1 * noOfCardsEval;
+                }
+            }
+
+            //A8 evaluation
+            {
+                float A8eval = 0;
+                List<Move> output = new List<Move>();
+                foreach (var card in mojeKarte)
+                {
+                    if (card.Broj == "A" || card.Broj == "8")
+                    {
+                        DodajPotezeA8Kombinacije(card, mojeKarte, ref output);
+                    }
+                }
+                output = SortMovesDescending(output);
+                if (output.Count != 0)
+                {
+                    List<Karta> bestMoveChain = output[0].Karte;
+                    if (bestMoveChain.Count == mojeKarte.Count && bestMoveChain[0].Boja == trenutnaBoja)
+                    {
+                        A8eval = 500;
+                    }
+                    else
+                    {
+                        A8eval = bestMoveChain.Count * 100;
+                    }
+                }
+                result += 2 * A8eval;
+            }
+
+            return result;
+        }
+
         //NE VALJA EVALUACIJA
-        public int RacunajVrednost(bool player)
+        public float RacunajVrednost(bool player)
         {
-            int result = 0;
+            float result = 0;
             if ((mojeKarte.Count + brojKupljenihKarti) == 0)
             {
-                return 100;
+                return 1000;
             }
             else if ((brojProtKarata + brojProtKupljenihKarti) == 0)
             {
-                return -100;
+                return -1000;
             }
             else if (!kupioKartu)
             {
-                result = (brojProtKarata - mojeKarte.Count) * 30;
+                int noOfSevensInHand = 0;
+                int noOfJacksInHand = 0;
+                float noOfRemainingCards = preostaleHerz.Count + preostaleKaro.Count + preostalePik.Count + preostaleTref.Count;
+                int noOfPowerCardsInDeck = preostaleKec.Count + preostaleOsmice.Count + preostaleSedmice.Count + preostaleZandar.Count;
+                noOfRemainingCards += noOfPowerCardsInDeck;
+
+                //No of cards
+                {
+                    int noOfCardsEval = 1 * (mojeKarte.Count - brojProtKarata);
+                    if (brojProtKarata == 0)
+                    {
+                        noOfCardsEval -= 500;
+                        return result += 1 * noOfCardsEval;
+                    }
+                    else if (mojeKarte.Count == 0)
+                    {
+                        noOfCardsEval += 500;
+                        return result += 1 * noOfCardsEval;
+                    }
+                    else
+                    {
+                        result += 1 * noOfCardsEval;
+                    }
+                }
+
+                //Jack percentage
+                {
+                    float jackEval = 0;
+                    jackEval = noOfJacksInHand / mojeKarte.Count;
+                    result += 25 * jackEval;
+                }
+
+                //Sevens value
+                {
+                    float z = brojKupljenihKarti + noOfRemainingCards + brojProtKarata;
+                    float valueOfSeven;
+
+                    if (preostaleSedmice.Count == 0)
+                    {
+                        valueOfSeven = 25;
+                    }
+                    else
+                    {
+                        valueOfSeven = z / (preostaleSedmice.Count * brojProtKarata);
+                    }
+                    result += 1 * noOfSevensInHand * valueOfSeven;
+                }
+
+                result += (brojProtKarata - mojeKarte.Count) * 30;
                 result -= (brojKupljenihKarti - brojProtKupljenihKarti) * 10;
 
                 for (int i = 0; i < mojeKarte.Count; i++)
                 {
-                    if (trenutnaBoja == mojeKarte[i].Boja)
+                    if (trenutnaBoja == mojeKarte[i].Boja || talon.Broj.Equals(mojeKarte[i].Broj))
                         result += 20;
                 }
             }
